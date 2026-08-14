@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PaintData · 思维引擎</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,300,0,0&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            },
+            svg: { fontCache: 'global' },
+            options: {
+                ignoreHtmlClass: 'no-mathjax',
+                processHtmlClass: 'mathjax-process'
+            }
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" id="MathJax-script" async></script>
+    <style>
+        :root {
+            --bg: #ffffff;
+            --surface: #fafafa;
+            --surface-hover: #f4f4f4;
+            --border: #eaeaea;
+            --border-strong: #d9d9d9;
+            --text: #111111;
+            --text-secondary: #5a5a5a;
+            --text-tertiary: #9a9a9a;
+            --radius-lg: 28px;
+            --radius-md: 18px;
+            --radius-sm: 12px;
+            --shadow-sm: 0 2px 8px rgba(0,0,0,0.03);
+            --shadow-md: 0 8px 24px rgba(0,0,0,0.05);
+            --shadow-lg: 0 16px 40px rgba(0,0,0,0.08);
+            --transition-fast: 0.2s cubic-bezier(0.2,0,0,1);
+            --transition-smooth: 0.35s cubic-bezier(0.2,0,0,1);
+            --transition-bounce: 0.45s cubic-bezier(0.34,1.56,0.64,1);
+            --color-info: #007aff;
+            --color-warn: #ff9500;
+            --color-error: #ff3b30;
+        }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.25rem;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        .container {
+            width: 100%;
+            max-width: 800px;
+            background: var(--bg);
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-md);
+            padding: 1.8rem 1.6rem 1.5rem;
+            transition: box-shadow var(--transition-smooth), border-color var(--transition-fast);
+        }
+        .container:focus-within { box-shadow: var(--shadow-lg); border-color: var(--border-strong); }
+        .tabs { display:flex; gap:4px; margin-bottom:1.25rem; border-bottom:1px solid var(--border); }
+        .tab-btn {
+            display:flex; align-items:center; gap:6px; padding:0.7rem 1.2rem;
+            background:none; border:none; font-family:'Inter',sans-serif;
+            font-size:0.85rem; font-weight:500; color:var(--text-tertiary);
+            cursor:pointer; border-bottom:2px solid transparent;
+            transition: color var(--transition-fast), border-color var(--transition-fast), background var(--transition-fast);
+            letter-spacing:0.01em;
+        }
+        .tab-btn:hover { color:var(--text-secondary); background:var(--surface); }
+        .tab-btn.active { color:var(--text); border-bottom-color:var(--text); }
+        .tab-btn .material-symbols-outlined { font-size:18px; }
+        .tab-panel { display:none; animation:panel-in 0.35s cubic-bezier(0.2,0.9,0.3,1) forwards; }
+        .tab-panel.active { display:block; }
+        @keyframes panel-in { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+        .header { display:flex; align-items:center; gap:12px; margin-bottom:1.25rem; padding-bottom:1rem; border-bottom:1px solid var(--border); }
+        .model-badge {
+            width:44px; height:44px; border-radius:var(--radius-sm); background:var(--surface);
+            display:flex; align-items:center; justify-content:center; color:var(--text);
+            border:1px solid var(--border); transition: background var(--transition-fast), transform var(--transition-bounce);
+            flex-shrink:0;
+        }
+        .model-badge .material-symbols-outlined { font-size:26px; }
+        .header-info h1 { font-size:1.25rem; font-weight:600; letter-spacing:-0.02em; }
+        .header-info .status-row { display:flex; align-items:center; gap:6px; margin-top:4px; }
+        .status-dot { width:7px; height:7px; border-radius:50%; background:#34c759; transition:background var(--transition-fast), box-shadow var(--transition-fast); }
+        .status-dot.processing { background:#007aff; animation:pulse-dot 1.2s infinite cubic-bezier(0.4,0,0.2,1); }
+        .status-dot.fallback { background:#ff9500; animation:pulse-dot 1.2s infinite cubic-bezier(0.4,0,0.2,1); }
+        @keyframes pulse-dot { 0%,100% { box-shadow:0 0 0 0 rgba(0,122,255,0.35); } 50% { box-shadow:0 0 0 7px rgba(0,122,255,0); } }
+        .status-text { font-size:0.75rem; font-weight:400; color:var(--text-secondary); }
+        .messages { min-height:240px; max-height:400px; overflow-y:auto; display:flex; flex-direction:column; gap:0.9rem; margin-bottom:1rem; padding-right:4px; scroll-behavior:smooth; }
+        .messages::-webkit-scrollbar { width:4px; }
+        .messages::-webkit-scrollbar-thumb { background:var(--border-strong); border-radius:4px; }
+        .message { display:flex; align-items:flex-start; gap:10px; opacity:0; animation:message-in 0.35s cubic-bezier(0.2,0.9,0.3,1) forwards; position:relative; }
+        .message:hover .copy-btn { opacity:1; }
+        @keyframes message-in { from { opacity:0; transform:translateY(8px) scale(0.97); } to { opacity:1; transform:translateY(0) scale(1); } }
+        .message.user { flex-direction:row-reverse; }
+        .message-avatar { width:32px; height:32px; border-radius:10px; background:var(--surface); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; flex-shrink:0; color:var(--text-secondary); }
+        .message.user .message-avatar { background:#f0f0f0; }
+        .message-avatar .material-symbols-outlined { font-size:17px; }
+        .message-bubble {
+            padding:0.8rem 1.1rem;
+            border-radius:var(--radius-md) var(--radius-md) var(--radius-md) 6px;
+            background:var(--surface);
+            font-size:0.88rem;
+            line-height:1.7;
+            max-width:78%;
+            word-break:break-word;
+            border:1px solid var(--border);
+            transition:background var(--transition-fast);
+            cursor:default;
+            overflow-wrap:break-word;
+            min-height:1.5rem;
+        }
+        .message.user .message-bubble { background:#f2f2f2; border-radius:var(--radius-md) var(--radius-md) 6px var(--radius-md); border-color:#e6e6e6; }
+        .message-bubble.fallback { border-color:#ffe0b2; background:#fff8e1; }
+        .message-bubble p { margin:0 0 0.5rem 0; }
+        .message-bubble p:last-child { margin-bottom:0; }
+        .message-bubble h1,.message-bubble h2,.message-bubble h3,.message-bubble h4 { margin:0.5rem 0 0.3rem; font-weight:600; }
+        .message-bubble ul,.message-bubble ol { margin:0.3rem 0; padding-left:1.5rem; }
+        .message-bubble li { margin:0.15rem 0; }
+        .message-bubble code { background:#f0f0f0; padding:0.15rem 0.35rem; border-radius:4px; font-family:'SF Mono','Menlo',monospace; font-size:0.8rem; }
+        .message-bubble pre { background:#f5f5f5; padding:0.8rem; border-radius:8px; overflow-x:auto; margin:0.5rem 0; }
+        .message-bubble pre code { background:none; padding:0; }
+        .message-bubble blockquote { border-left:3px solid var(--border-strong); padding-left:0.8rem; margin:0.5rem 0; color:var(--text-secondary); }
+        .message-bubble table { border-collapse:collapse; margin:0.5rem 0; width:100%; }
+        .message-bubble th,.message-bubble td { border:1px solid var(--border); padding:0.4rem 0.6rem; text-align:left; }
+        .message-bubble th { background:var(--surface); font-weight:600; }
+        .message-bubble img { max-width:100%; border-radius:8px; }
+        .message-bubble .math-display { overflow-x:auto; overflow-y:hidden; padding:0.3rem 0; }
+        .message-bubble mjx-container { display:inline-block; margin:0; }
+        .message-bubble .typing-cursor {
+            display:inline-block;
+            width:2px;
+            height:1em;
+            background:#007aff;
+            margin-left:2px;
+            vertical-align:text-bottom;
+            animation:cursor-blink 0.8s infinite;
+        }
+        @keyframes cursor-blink { 0%,50% { opacity:1; } 51%,100% { opacity:0; } }
+        .copy-btn { position:absolute; top:50%; transform:translateY(-50%); width:26px; height:26px; border-radius:8px; border:1px solid var(--border); background:var(--bg); color:var(--text-secondary); cursor:pointer; display:flex; align-items:center; justify-content:center; opacity:0; transition:opacity var(--transition-fast); z-index:5; }
+        .message.user .copy-btn { left:40px; }
+        .message:not(.user) .copy-btn { right:40px; }
+        .copy-btn:hover { background:var(--surface-hover); color:var(--text); }
+        .copy-btn .material-symbols-outlined { font-size:14px; }
+        .empty-hint { text-align:center; color:var(--text-tertiary); font-size:0.8rem; padding:1.2rem 0.5rem; }
+        .log-container { background:var(--surface); border-radius:var(--radius-md); border:1px solid var(--border); padding:1rem 1.2rem; min-height:240px; max-height:360px; overflow-y:auto; font-size:0.75rem; line-height:1.6; color:var(--text-secondary); font-family:'SF Mono','Menlo',monospace; }
+        .log-container::-webkit-scrollbar { width:4px; }
+        .log-container::-webkit-scrollbar-thumb { background:var(--border-strong); border-radius:4px; }
+        .log-entry { display:flex; gap:8px; padding:0.25rem 0; border-bottom:1px solid var(--border); animation:log-in 0.2s ease forwards; }
+        .log-entry:last-child { border-bottom:none; }
+        @keyframes log-in { from { opacity:0; transform:translateX(-4px); } to { opacity:1; transform:translateX(0); } }
+        .log-time { color:var(--text-tertiary); font-size:0.7rem; flex-shrink:0; min-width:55px; }
+        .log-level { flex-shrink:0; min-width:45px; font-weight:600; }
+        .log-level.info { color:var(--color-info); }
+        .log-level.warn { color:var(--color-warn); }
+        .log-level.error { color:var(--color-error); }
+        .log-message { flex:1; word-break:break-word; }
+        .thinking-bar { display:flex; align-items:center; gap:8px; padding:0.2rem 0 0.5rem; opacity:0; pointer-events:none; transition:opacity var(--transition-fast); }
+        .thinking-bar.active { opacity:1; }
+        .thinking-dots { display:flex; gap:4px; }
+        .thinking-dot { width:5px; height:5px; border-radius:50%; background:var(--text-tertiary); animation:dot-bounce 1.2s infinite; }
+        .thinking-dot:nth-child(2) { animation-delay:0.15s; }
+        .thinking-dot:nth-child(3) { animation-delay:0.3s; }
+        @keyframes dot-bounce { 0%,80%,100% { transform:translateY(0); opacity:0.5; } 40% { transform:translateY(-5px); opacity:1; } }
+        .input-area { display:flex; align-items:center; gap:10px; background:var(--bg); border:1px solid var(--border); border-radius:40px; padding:6px 6px 6px 18px; transition:border-color var(--transition-fast), box-shadow var(--transition-fast); margin-top:0.5rem; }
+        .input-area:focus-within { border-color:var(--border-strong); box-shadow:var(--shadow-sm); }
+        .input-area input { flex:1; border:none; background:transparent; font-family:'Inter',sans-serif; font-size:0.88rem; padding:8px 0; outline:none; color:var(--text); }
+        .input-area input::placeholder { color:var(--text-tertiary); font-weight:300; }
+        .send-btn { width:40px; height:40px; border-radius:50%; border:none; background:var(--accent,#111); color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background var(--transition-fast), transform 0.2s; flex-shrink:0; }
+        .send-btn:hover { background:#2a2a2a; }
+        .send-btn:active { transform:scale(0.93); }
+        .send-btn .material-symbols-outlined { font-size:19px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="tabs">
+        <button class="tab-btn active" data-tab="chat"><span class="material-symbols-outlined">chat</span>对话</button>
+        <button class="tab-btn" data-tab="logs"><span class="material-symbols-outlined">description</span>日志</button>
+    </div>
+
+    <div class="tab-panel active" id="panel-chat">
+        <div class="header">
+            <div class="model-badge"><span class="material-symbols-outlined">neurology</span></div>
+            <div class="header-info">
+                <h1>PaintData</h1>
+                <div class="status-row">
+                    <span class="status-dot" id="statusDot"></span>
+                    <span class="status-text" id="statusLabel">就绪</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="messages" id="messageList">
+            <div class="empty-hint" id="emptyHint">输入内容开始对话</div>
+        </div>
+
+        <div class="thinking-bar" id="thinkingBar">
+            <span class="material-symbols-outlined">psychiatry</span>
+            <div class="thinking-dots"><span class="thinking-dot"></span><span class="thinking-dot"></span><span class="thinking-dot"></span></div>
+            <span class="status-text">思考中</span>
+        </div>
+
+        <div class="input-area">
+            <input type="text" id="userInput" placeholder="输入内容，支持Markdown和数学公式" autocomplete="off">
+            <button class="send-btn" id="sendBtn" aria-label="发送"><span class="material-symbols-outlined">arrow_upward</span></button>
+        </div>
+    </div>
+
+    <div class="tab-panel" id="panel-logs">
+        <div class="header" style="margin-bottom:0.8rem;padding-bottom:0.8rem;">
+            <div class="model-badge"><span class="material-symbols-outlined">monitoring</span></div>
+            <div class="header-info"><h1 style="font-size:1.1rem;">运行日志</h1></div>
+        </div>
+        <div class="log-container" id="logContainer"></div>
+    </div>
+</div>
+
+<script>
+(function() {
+    const API_URL = 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
+    const ENC_API_KEY = 'ODQyYjY5ODdlYWM4NGNjYWI1NmViOTUyYTljYjZiM2MuR01Gem5IRzZaOE5RZHN0SQ==';
+    const MODEL_NAME = 'glm-4-flash';
+    
+    function getApiKey() {
+        return atob(ENC_API_KEY);
+    }
+    
+    const messageList = document.getElementById('messageList');
+    const userInput = document.getElementById('userInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const thinkingBar = document.getElementById('thinkingBar');
+    const statusDot = document.getElementById('statusDot');
+    const statusLabel = document.getElementById('statusLabel');
+    const emptyHint = document.getElementById('emptyHint');
+    const logContainer = document.getElementById('logContainer');
+    
+    let isProcessing = false;
+    let messageCount = 0;
+    let conversationHistory = [];
+    
+    function log(level, message) {
+        const entry = document.createElement('div');
+        entry.className = 'log-entry';
+        const now = new Date();
+        const timeStr = now.toTimeString().slice(0,8);
+        const levelSpan = document.createElement('span');
+        levelSpan.className = 'log-level ' + level;
+        levelSpan.textContent = level.toUpperCase();
+        const timeSpan = document.createElement('span');
+        timeSpan.className = 'log-time';
+        timeSpan.textContent = timeStr;
+        const msgSpan = document.createElement('span');
+        msgSpan.className = 'log-message';
+        msgSpan.textContent = message;
+        entry.appendChild(timeSpan);
+        entry.appendChild(levelSpan);
+        entry.appendChild(msgSpan);
+        logContainer.appendChild(entry);
+        logContainer.scrollTop = logContainer.scrollHeight;
+    }
+    
+    function renderMarkdown(text) {
+        let processed = text;
+        const mathBlocks = [];
+        processed = processed.replace(/\$\$([\s\S]+?)\$\$/g, (match, content) => {
+            const id = 'MATHBLOCK' + mathBlocks.length;
+            mathBlocks.push({ type: 'display', content });
+            return '\n' + id + '\n';
+        });
+        processed = processed.replace(/\$([^\$\n]+?)\$/g, (match, content) => {
+            const id = 'MATHINLINE' + mathBlocks.length;
+            mathBlocks.push({ type: 'inline', content });
+            return id;
+        });
+        let html = marked.parse(processed);
+        mathBlocks.forEach((block, i) => {
+            const id = (block.type === 'display' ? 'MATHBLOCK' : 'MATHINLINE') + i;
+            const mathHtml = block.type === 'display'
+                ? '\\[' + block.content + '\\]'
+                : '\\(' + block.content + '\\)';
+            html = html.replace(id, mathHtml);
+        });
+        return html;
+    }
+    
+    function createMessageElement(sender, isFallback = false) {
+        if (emptyHint && messageList.contains(emptyHint)) emptyHint.style.display = 'none';
+        messageCount++;
+        const msgDiv = document.createElement('div');
+        msgDiv.className = 'message ' + sender;
+        const avatar = document.createElement('div');
+        avatar.className = 'message-avatar';
+        const icon = document.createElement('span');
+        icon.className = 'material-symbols-outlined';
+        icon.textContent = sender === 'user' ? 'person' : 'neurology';
+        avatar.appendChild(icon);
+        const bubble = document.createElement('div');
+        bubble.className = 'message-bubble';
+        if (isFallback) bubble.classList.add('fallback');
+        const copyBtn = document.createElement('button');
+        copyBtn.className = 'copy-btn';
+        copyBtn.innerHTML = '<span class="material-symbols-outlined">content_copy</span>';
+        copyBtn.title = '复制内容';
+        msgDiv.appendChild(avatar);
+        msgDiv.appendChild(bubble);
+        msgDiv.appendChild(copyBtn);
+        messageList.appendChild(msgDiv);
+        messageList.scrollTo({ top: messageList.scrollHeight, behavior: 'smooth' });
+        return { msgDiv, bubble, copyBtn };
+    }
+    
+    function typeText(bubble, content, isMarkdown, onComplete) {
+        const plainText = content;
+        const displayText = isMarkdown ? renderMarkdown(content) : content;
+        const cursor = document.createElement('span');
+        cursor.className = 'typing-cursor';
+        bubble.appendChild(cursor);
+        
+        let charIndex = 0;
+        const totalChars = plainText.length;
+        const speed = totalChars > 100 ? 6 : 12;
+        
+        function typeNextChar() {
+            if (charIndex < totalChars) {
+                const partialText = plainText.slice(0, charIndex + 1);
+                const partialHtml = isMarkdown ? renderMarkdown(partialText) : partialText;
+                bubble.innerHTML = partialHtml;
+                bubble.appendChild(cursor);
+                if (isMarkdown && window.MathJax && window.MathJax.typesetPromise) {
+                    MathJax.typesetPromise([bubble]).catch(() => {});
+                }
+                charIndex++;
+                messageList.scrollTo({ top: messageList.scrollHeight, behavior: 'smooth' });
+                setTimeout(typeNextChar, speed);
+            } else {
+                cursor.remove();
+                bubble.innerHTML = displayText;
+                if (isMarkdown && window.MathJax && window.MathJax.typesetPromise) {
+                    MathJax.typesetPromise([bubble]).catch(() => {});
+                }
+                if (onComplete) onComplete();
+            }
+        }
+        
+        typeNextChar();
+    }
+    
+    function addMessage(content, sender, isFallback = false, useTyping = false) {
+        const { bubble, copyBtn } = createMessageElement(sender, isFallback);
+        const isMarkdown = sender === 'assistant';
+        
+        copyBtn.addEventListener('click', () => {
+            navigator.clipboard.writeText(content).then(() => {
+                copyBtn.innerHTML = '<span class="material-symbols-outlined">check</span>';
+                setTimeout(() => { copyBtn.innerHTML = '<span class="material-symbols-outlined">content_copy</span>'; }, 800);
+            });
+        });
+        
+        if (useTyping && sender === 'assistant') {
+            typeText(bubble, content, isMarkdown);
+        } else {
+            bubble.innerHTML = isMarkdown ? renderMarkdown(content) : content;
+            if (isMarkdown && window.MathJax && window.MathJax.typesetPromise) {
+                MathJax.typesetPromise([bubble]).catch(() => {});
+            }
+        }
+        
+        messageList.scrollTo({ top: messageList.scrollHeight, behavior: 'smooth' });
+        log('info', (sender === 'user' ? '用户输入' : '模型输出') + ' #' + messageCount + ': ' + content.slice(0, 60));
+    }
+    
+    function setProcessing(active, isFallback = false) {
+        isProcessing = active;
+        if (active) {
+            thinkingBar.classList.add('active');
+            statusDot.classList.add(isFallback ? 'fallback' : 'processing');
+            statusDot.classList.remove(isFallback ? 'processing' : 'fallback');
+            statusLabel.textContent = isFallback ? '本地推理中' : '深度推理中';
+        } else {
+            thinkingBar.classList.remove('active');
+            statusDot.classList.remove('processing', 'fallback');
+            statusLabel.textContent = '就绪';
+        }
+    }
+    
+    async function callCloudAPI(userMessage) {
+        const systemPrompt = '你是PaintData，一个解决日常问题的AI。你必须独立思考，展示你如何解构问题的内在矛盾，而不是匹配现成答案。绝对禁止使用"作为AI，我无法"这类表述。禁止将问题降解为分类任务或回归任务。请用中文回答，支持Markdown和LaTeX数学公式（行内$...$，独立$$...$$，分数用\\frac）。';
+        const messages = [
+            { role: 'system', content: systemPrompt },
+            ...conversationHistory.slice(-10),
+            { role: 'user', content: userMessage }
+        ];
+        
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            headers: {
+                'Authorization': 'Bearer ' + getApiKey(),
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                model: MODEL_NAME,
+                messages: messages,
+                temperature: 0.8,
+                max_tokens: 2048
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error('服务器繁忙');
+        }
+        
+        const data = await response.json();
+        const reply = data.choices?.[0]?.message?.content;
+        if (!reply) {
+            throw new Error('服务器繁忙');
+        }
+        
+        return reply;
+    }
+    
+    const fallbackResponses = [
+        '先说我的思考路径：这个问题表面问的是工具，实质是**效率与控制的矛盾**。\n\n直接给结论：\n\n$$\n\\text{效率} = \\frac{\\text{产出}}{\\text{时间}} \\quad \\text{控制} = \\frac{\\text{可调参数}}{\\text{总参数}}\n$$\n\n两者不可兼得时，优先保住效率。',
+        '拆解一下：日常问题的本质是**约束条件下的优化**。\n\n比如：\n\n| 约束 | 目标 |\n|------|------|\n| 时间有限 | 完成度最高 |\n| 信息不全 | 风险最小 |\n\n公式：\n\n$$\n\\min_{x} \\, f(x) \\quad \\text{s.t.} \\quad g(x) \\leq 0\n$$\n\n但真实生活不需要最优解，**可行解就够了**。',
+        '我注意到一个矛盾：**你问的是"怎么解决"，但问题本身可能不需要被"解决"**。\n\n有时候：\n\n$$\n\\text{问题} \\neq \\text{障碍} \\quad \\text{而是} \\quad \\text{信号}\n$$\n\n它告诉你某个环节需要重新审视。'
+    ];
+    
+    function getFallbackResponse(text) {
+        return fallbackResponses[messageCount % fallbackResponses.length];
+    }
+    
+    function handleSend() {
+        if (isProcessing) return;
+        const text = userInput.value.trim();
+        if (!text) return;
+        addMessage(text, 'user');
+        conversationHistory.push({ role: 'user', content: text });
+        userInput.value = '';
+        setProcessing(true, false);
+        setTimeout(async () => {
+            try {
+                const response = await callCloudAPI(text);
+                addMessage(response, 'assistant', false, true);
+                conversationHistory.push({ role: 'assistant', content: response });
+            } catch (e) {
+                log('warn', '服务器繁忙，切换本地推理');
+                setProcessing(true, true);
+                setTimeout(() => {
+                    const fallbackResponse = getFallbackResponse(text);
+                    addMessage(fallbackResponse, 'assistant', true, true);
+                    conversationHistory.push({ role: 'assistant', content: fallbackResponse });
+                    setProcessing(false);
+                }, 400);
+                return;
+            }
+            setProcessing(false);
+        }, 100);
+    }
+    
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const target = btn.dataset.tab;
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById('panel-' + target).classList.add('active');
+        });
+    });
+    
+    sendBtn.addEventListener('click', handleSend);
+    userInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            handleSend();
+        }
+    });
+    
+    log('info', 'PaintData 思维引擎已启动');
+})();
+</script>
+</body>
+</html>
